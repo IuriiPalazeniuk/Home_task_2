@@ -1,35 +1,42 @@
 package com.contrutors;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import lombok.SneakyThrows;
+
 import static java.util.AbstractMap.SimpleEntry;
-import static java.util.stream.Collectors.toMap;
+
 
 public class Executer {
 
-    public static void main(String[] args) throws IOException {
+    @SneakyThrows
+    public static void main(String[] args) {
 
         FileInputStream fis = new FileInputStream("src/config.properties");
         Properties properties = new Properties();
         properties.load(fis);
-        Map<String, Integer> reverted = properties.entrySet().stream()
-            .map(entry -> new SimpleEntry<>(Integer.parseInt(String.valueOf(entry.getKey())),
-                                            String.valueOf(entry.getValue())))
-            .collect(toMap(SimpleEntry::getValue, SimpleEntry::getKey, (first, second) -> {
-                throw new RuntimeException("My custom exception");
-            }));
-        Map<String, Integer> sortedMap = new HashMap<>();
-        reverted.entrySet().stream().sorted(Map.Entry.comparingByKey())
-            .forEachOrdered(x -> sortedMap.put(x.getKey(), x.getValue()));
-        sortedMap.forEach((key, value) -> properties.put(key, value));
+        Map<String, Integer> reverted = new HashMap<>();
 
-        Files.write(Paths.get("src/newConf.properties"), () -> sortedMap.entrySet().stream()
-            .<CharSequence>map(e -> e.getKey() + " = " + e.getValue()).iterator());
+        for (Map.Entry<Object, Object> entry : properties.entrySet()) {
+
+            SimpleEntry<Integer, String> integerStringSimpleEntry =
+                new SimpleEntry<>(Integer.parseInt(String.valueOf(entry.getKey())), String.valueOf(entry.getValue()));
+
+            if (integerStringSimpleEntry.getValue()
+                .equalsIgnoreCase(String.valueOf(integerStringSimpleEntry.getKey()))) {
+                throw new Exception("My custom exception");
+            }
+
+            reverted.put(String.valueOf(entry.getValue()), integerStringSimpleEntry.getKey());
+        }
+
+        Files.write(Paths.get("src/newConf.properties"),
+                    () -> reverted.entrySet().stream().sorted(Map.Entry.comparingByKey())
+                        .<CharSequence>map(e -> e.getKey() + " = " + e.getValue()).iterator());
     }
 }
